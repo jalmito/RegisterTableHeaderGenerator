@@ -1,0 +1,58 @@
+#!/usr/bin/perl
+
+#use strict;
+#use warnings;
+use Clipboard;
+#bind -x '"\eW":"/home/antonio/Documents/RTEMSTMSBSPChanges/datasheetProcess"'
+
+my $ClipboardString = Clipboard->paste();
+print $ClipboardString;
+my $RegisterType = "\tuint32";
+$flag = 333;
+$accum = 0;
+
+open my $inTextStream, '>', 'RegRawData.txt' || die "Nope";
+print $inTextStream $ClipboardString;
+close $inTextStream;
+open my $outTextStream, '>', 'RegOutData.txt' || die "Nope";
+print $outTextStream "typedef struct{\n";
+close $outTextStream;
+
+my $ClipboardOutput = "";
+
+my $registerRawString = $ClipboardString;
+for ($i = 0; $i < 256; $i+=4) {
+	my $hexString = sprintf("%.2Xh",$i);
+	open my $inTextStream, '<', 'RegRawData.txt' || die "Nope";
+	open my $outTextStream, '>>', 'RegOutData.txt' || die "Nope";
+	
+	while (<$inTextStream>) {
+		$RegIndex=$accum;
+		$NotUsedIx=$i/4;
+		if(s/$hexString ([A-Z0-9_]*)/ uint32\t\1;\t\/\//g){	
+		if($flag == 0 && $accum > 1){
+			print $outTextStream (" uint32 NOTUSED_$NotUsedIx\[$RegIndex\];\n");
+			$ClipboardOutput = "$ClipboardOutput uint32 NOTUSED_$NotUsedIx\[$RegIndex\];\n";
+		}elsif($flag == 0 && $accum == 1){
+			print $outTextStream (" uint32 NOTUSED_$NotUsedIx;\n");
+		}
+		else{}
+		print $outTextStream $_;
+		$ClipboardOutput = "$ClipboardOutput $_"; 
+		$flag =1;
+		$accum =0;
+		}
+	}
+	if ($flag != 1){ 
+	$accum++;
+	}
+	else
+	
+	{$flag = 0;}
+close $inTextStream;
+close $outTextStream;
+}
+#print $ClipboardOutput;
+@array = system("cat RegOutData.txt | xclip -selection clipboard");
+#Clipboard->copy('Some String'); 
+
